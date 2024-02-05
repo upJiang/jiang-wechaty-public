@@ -1,0 +1,51 @@
+# https://github.com/marketplace/actions/ssh-deploy
+
+name: Build And Deploy
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup Node
+        uses: actions/setup-node@v1
+        with:
+          node-version: 16.13.0
+      - name: Install Dependencies
+        run: yarn
+      - name: Deploy
+        uses: easingthemes/ssh-deploy@v5.0.0
+        with:
+          # Private Key
+          SSH_PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+          # Arguments to pass to rsync
+          # ARGS: # optional, default is -rltgoDz
+          # Source directory
+          SOURCE: "./"
+          EXCLUDE: "/.github/, /.Vscode/, .gitignore, /.git/"
+          # Remote host
+          REMOTE_HOST: ${{ secrets.REMOTE_HOST }}
+          # Remote user
+          REMOTE_USER: ${{ secrets.REMOTE_USERNAME }}
+          # Target directory22
+          TARGET: "/jiang/wechatBot"
+          SCRIPT_AFTER: "yarn build"
+      - name: run on remote
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USERNAME }}
+          password: ${{ secrets.REMOTE_PASSWORD }}
+          port: ${{ secrets.REMOTE_PORT }}
+          script: |
+            cd /jiang/wechatBot
+            forever stopall
+            forever start ./src/main.js
+            sleep 10
+            source ./setenv.sh
+            echo "$LOGIN_URL" > /www/wwwroot/junfeng530.xyz/xx.txt
